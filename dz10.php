@@ -1,21 +1,32 @@
 <?php
 
-/* dz9.php
+/* dz10.php
  * 
- Задание dz_8.php переделать с помощью хранения информации в БД
-    Для категорий и городов сделать отдельные таблицы
-    Для каждого объявления использовать одну строку в БД
-
-    Затем сдаете задачу в планфиксе.
-    Затем выполняете всё с помощью модуля mysqli
-
-    Затем снова сдаете задачу в планфиксе.
+  Задание dz9.php (mysqli) переделать с помощью DbSimple, 
+  все запросы к БД должны выводиться отладочным механизмом через FirePHP и видны в консоли Firebug
+  
  */
+ 
+//error_reporting(E_ALL);
+
+$debug=0;
 
 
 $project_root=$_SERVER['DOCUMENT_ROOT'];
 
+
+require_once $project_root.'/dbsimple/lib/config.php';
+require_once $project_root.'/dbsimple/lib/DbSimple/Generic.php';
+
+require_once $project_root.'/FirePHPCore/FirePHP.class.php';
+
+$firePHP = FirePHP::getInstance(true);
+
+$firePHP -> setEnabled(true);
+
+
 if (0) {
+    
     
     var_dump(getenv('IP'));
     var_dump(getenv('C9_USER'));
@@ -44,7 +55,7 @@ $smarty->config_dir = $smarty_dir.'configs';
 header('Content-type: text/html; charset=utf-8');
 
 
-$current_php_script='dz9';
+$current_php_script='dz10';
 
 
 $seller_name="";
@@ -65,14 +76,61 @@ $db_server='localhost'; */
     $db_user='k6162353';
     $db_name='c9';
     $db_server='0.0.0.0';
-    $db_bass='';
+    $db_pass='';
 
 $mysql_last_id='';
 
 
-$conn = mysql_connect(
+/*$conn = mysql_connect(
 $db_server, $db_user,$db_pass)
-or die("Невозможно установить соединение: ". mysql_error());
+or die("Невозможно установить соединение: ". mysql_error()); */
+
+$db = DbSimple_Generic::connect('mysqli://' . $db_user . ':' . $db_pass . '@'. $db_server. '/'. $db_name);
+
+$db->setErrorHandler('databaseErrorHandler');
+$db->setLogger('myLogger');
+
+function databaseErrorHandler($message, $info)
+{
+    if (!error_reporting()) return;
+    echo "SQL Error: $message<br><pre>"; 
+    print_r($info); 
+    echo "</pre>";
+    exit();
+}
+
+
+function myLogger($db, $sql, $caller)
+{
+    global $firePHP;
+    global $result;
+
+
+    if (isset($caller['file'])) {
+    
+    $firePHP->group("at ".@$caller['file'].' line '.@$caller['line']);
+    }
+    
+    $firePHP->log($sql);
+    
+    
+    if (isset($caller['file'])) {
+        
+        $firePHP->groupEnd();
+    }
+    
+}
+    
+    
+    
+
+
+
+
+
+
+/*
+
 
 mysql_select_db($db_name);
 mysql_query('SET NAMES utf8');
@@ -87,14 +145,29 @@ while ($result = mysql_fetch_assoc($result_query)) {
     $cities[$result['city']]=$result['id'];
 }
 
+*/
 
+$result= $db->select('select * from cities order by id ASC');
+
+
+foreach ($result as $value)  {
+    
+    $cities[$value['city']]=$value['id'];
+    
+}
+
+$firePHP->log($cities);
 //var_dump($cities);
+
+
 
 
 
 $tube_station_id='';
 
 /* МЕТРО $tube_stations  */
+
+/*
 
 $query='select * from tube_stations order by tube_station ASC';
 
@@ -104,12 +177,23 @@ while ($result = mysql_fetch_assoc($result_query)) {
 $tube_stations[$result['tube_station']]=$result['id'];
 }
 
+*/
 
+$result= $db->select('select * from tube_stations order by tube_station ASC');
 
+foreach ($result as $value)  {
+    
+    $tube_stations[$value['tube_station']]=$value['id'];
+    
+}
 
+//var_dump($tube_stations);
+
+$firePHP->log($tube_stations,'tube_stations');
 
 $category_id='';
 
+/*
 
 $query='select * from categories order by id ASC';
 $result_query = mysql_query($query) or die('Запрос не удался');
@@ -132,9 +216,36 @@ mysql_free_result($result_subquery);
 $subcategory=array();
 
 
-}
+}  */
+
+$result= $db->select('select * from categories order by id ASC');
+
+
+foreach ($result as $value)  {
+    
+    $result2= $db->select('select * from subcategories where category='.$value['id'].' order by subcategory');
+    //var_dump($value['id']);
+    
+    //var_dump($result2);
+    
+    foreach ($result2 as $value2)  {
+        
+        $subcategory[$value2['subcategory']]=$value2['id'];
+        
+    }
+    //var_dump($subcategory);
+    
+    $categories[$value['category']]=$subcategory;
+    $subcategory=array();
+    
+
+} 
 
 //var_dump($categories);
+//$firePHP -> log($categories,'$categories');
+
+
+
 
 
 /*
@@ -142,6 +253,8 @@ $subcategory=array();
 */
 
 // Получаем объявления из бд
+
+/*
 
 $query='select * from ads order by id ASC';
 
@@ -153,8 +266,6 @@ $temp_array[]=$result;
 
 while ($result = mysql_fetch_assoc($result_query)) {
     $temp_array[]=$result;
-    
-    //var_dump($temp_array);
     }
 }
 
@@ -162,7 +273,21 @@ else {
 
 $temp_array=array();
 
+        } */
+        
+if ($result= $db->select('select * from ads order by id ASC')) {
+    
+    $temp_array=$result;
+    }
+
+else {
+
+$temp_array=array();
+
         }
+    
+$firePHP -> log($temp_array,'ads $temp_array');    
+//var_dump($temp_array);
         
 
         
@@ -187,30 +312,37 @@ if (isset($_POST['allow_mails'])) {
 
         //Изменили значение
         
-        $query='UPDATE ads SET '.
-        'title="'.$_POST['title'].'", price="'.$_POST['price']. 
-        '", user_name="'.$_POST['seller_name'].'", email="'.$_POST['email'].
-        '", tel="'.$_POST['phone'].'", descr="'.$_POST['description'].
-        '", id_city="'.$_POST['location_id'].'", id_tube_station="'.$_POST['metro_id'].
-        '", id_subcategory="'.$_POST['category_id'].'", private="'.$_POST['private'].
-        '", send_to_email="'.$allow_mails.  
-        '" WHERE id='.$_GET['id'].';';
+        $db->query('UPDATE ads SET '.
+        'title=?, price=?, user_name=? , 
+        email=?, tel=?, descr=?,
+        id_city=? , id_tube_station=? , id_subcategory=? ,
+        private=?, send_to_email=? WHERE id=?',
+        $_POST['title'], $_POST['price'], $_POST['seller_name'],
+        $_POST['email'], $_POST['phone'], $_POST['description'],
+        $_POST['location_id'], $_POST['metro_id'], $_POST['category_id'],
+        $_POST['private'], $allow_mails, $_GET['id']);
         
-        $result_query = mysql_query($query) or die('Изменение не удалось');
+        //$result_query = mysql_query($query) or die('Изменение не удалось');
         
         // обновляем в temp_array
         
-        $query='select * from ads where ads.id='.$_GET["id"].';';
+        $row=$db->selectRow('select * from ads where ads.id=?',$_GET["id"]);
+        
+        if ($debug) {
+        echo '<p>В изменении значения</p>';
+        echo '<b>$row=</b>';
+        var_dump($row);
+        
+        }
 
-$result_query = mysql_query($query) or die('Получение измененного элемента не удалось');        
+//$result_query = mysql_query($query) or die('Получение измененного элемента не удалось');        
         
 
 foreach ($temp_array as $key => $value) {
         
         if ($temp_array[$key]['id']==$_GET["id"]) {
             
-            $temp_array[$key]=mysql_fetch_assoc($result_query);
-        
+            $temp_array[$key]=$row;
             
         }
     }
@@ -231,9 +363,11 @@ header('Location:/'.$current_php_script.'.php');
 if (isset($_GET["id"])) {
     if (isset($_GET["del"])) {
 
-$query='delete from ads where ads.id='.$_GET["id"].';';
+$db->query('delete from ads where ads.id=?',$_GET["id"]);
 
-$result_query = mysql_query($query) or die('Удаление выбранного элемента не удалось');        
+
+
+//$result_query = mysql_query($query) or die('Удаление выбранного элемента не удалось');        
         
 
 foreach ($temp_array as $key => $value) {
@@ -330,25 +464,59 @@ if ($_POST['main_form']=='Добавить') {
 
         //вставили значение
         
-        $query='INSERT into ads '.
+/*        $query='INSERT into ads '.
         '(title, price, user_name, email, tel, descr, id_city, '.
         'id_tube_station, id_subcategory, private, send_to_email) '.
         'VALUES ("'.$_POST['title'].'", "'.$_POST['price'].'", "'.$_POST['seller_name'].'", "'
         .$_POST['email'].'", "'.$_POST['phone'].'", "'.$_POST['description'].'", "'
         .$_POST['location_id'].'", "'.$_POST['metro_id'].'", "'.$_POST['category_id'].'", "'
-        .$_POST['private'].'", "'.$allow_mails.'" );';
+        .$_POST['private'].'", "'.$allow_mails.'" );';   */
         
-
-        $result_query = mysql_query($query) or die('Вставка в ads не удалась');
+        $mysql_last_id=$db->query('INSERT into ads '.
+        '(title, price, user_name, email, tel, descr, id_city, '.
+        'id_tube_station, id_subcategory, private, send_to_email) '.
+        'VALUES (?, ?, ?,   ?, ?, ?,    ?, ?, ?,   ?, ? )' ,
+        $_POST['title'], $_POST['price'], $_POST['seller_name'],
+        $_POST['email'], $_POST['phone'], $_POST['description'], 
+        $_POST['location_id'], $_POST['metro_id'], $_POST['category_id'], 
+        $_POST['private'], $allow_mails);
+        
+        //$result_query = mysql_query($query) or die('Вставка в ads не удалась');
+        
+        //var_dump($db);
         
         
         // добавляем к temp_array вставленное значение, для мгновенного отображения
         
+        if ($debug) {
         
-        $mysql_last_id=mysql_insert_id();
-        $query='SELECT * from ads WHERE id='.$mysql_last_id.';';
-        $result_query = mysql_query($query) or die('Запрос из ads последнего объявления не удался');
-        $temp_array[]= mysql_fetch_assoc($result_query); 
+        echo '<p><b>$mysql_last_id=</b>';
+        var_dump($mysql_last_id);
+        echo '</p>';
+        
+        }
+        
+        //$mysql_last_id=mysql_insert_id();
+        $row=$db->selectRow('SELECT * from ads WHERE id=?',$mysql_last_id);
+        
+        if ($debug) {
+        
+        echo '<b>$row=</b>';
+        var_dump($row);
+        
+        }
+        
+        //$result_query = mysql_query($query) or die('Запрос из ads последнего объявления не удался');
+        $temp_array[]= $row; 
+        
+        if ($debug) {
+        
+        echo '<b>ads $temp_array=</b>';
+        var_dump($temp_array);
+        
+        }
+
+        
         
    
 
@@ -357,12 +525,16 @@ if ($_POST['main_form']=='Добавить') {
 
 }
 
+// без этого кода объявления не отображаются
+
 if (isset($temp_array)) {
         
 
       $amount_ads=count($temp_array); 
 
-}
+} 
+
+
 
 
 $smarty->assign('checkedPrivate',$checkedPrivate);
@@ -390,10 +562,13 @@ $smarty->assign('current_php_script',$current_php_script);
 
 $smarty->display($current_php_script.'.tpl');
 
+/*
 if (!is_bool($result_query)) {
 mysql_free_result($result_query);
 }
 mysql_close($conn);
+
+*/
 
 ?>
 
