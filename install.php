@@ -10,7 +10,7 @@ $debug = 0;
 header('Content-type: text/html; charset=utf-8');
 
 
-$current_php_script = 'dz10';
+$current_php_script = 'dz11';
 $site_dir = '';
 
 if (count($_POST)) {
