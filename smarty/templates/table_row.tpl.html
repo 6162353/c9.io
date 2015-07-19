@@ -1,0 +1,14 @@
+          <tr>
+              <td>{$ad->getId()}</td>
+              <td>{$ad->getTitle()}</td>
+              <td>{$ad->getDesc()}</td>
+              <td>{$ad->getPrice()}</td>
+              <td>
+              
+              <a data-toggle="tooltip" title="Редактировать объявление" href={$site_dir}/{$current_php_script}.php?edit=1&id={$ad->getId()}><span class='glyphicon glyphicon-edit'></span></a>
+              
+              <a data-toggle="tooltip" title="Удалить объявление" href={$site_dir}/{$current_php_script}.php?del=1&id={$ad->getId()}><span class='glyphicon glyphicon-remove-circle'></span></a>
+              
+              
+              </td>
+          </tr>

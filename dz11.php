@@ -502,7 +502,7 @@ $smarty->assign('current_php_script', $current_php_script);
 $smarty->assign('site_dir', $site_dir);
 
 
-$smarty->display('dz9.tpl');
+$smarty->display('dz11.tpl');
 ?>
 
 
